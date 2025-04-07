@@ -25,6 +25,7 @@ library(rvest)
 library(stringr)
 library(boot)
 library(mosaic)
+library(MatchIt)
 ```
 
 # Introduction
@@ -48,18 +49,33 @@ knitr::kable(armfold %>% group_by(Sex) %>% summarize(Frequency = n(), Prop = sum
 The observed difference in proportions between the two groups is `r -round(diffprop(Sex~LonR_fold, data=armfold), 3)` (males minus females).
 
 ## Part C
-```{r}
+```{r, results='hide', warning=FALSE, message=FALSE}
 armfold$Sex = relevel(factor(armfold$Sex), ref = "Male")
-test = prop.test(LonR_fold ~ Sex, data=armfold, success=1) # male - female
+arm_test = prop.test(LonR_fold ~ Sex, data=armfold, success=1) # male - female
 
-diff = test$estimate[1] - test$estimate[2]
+diff = arm_test$estimate[1] - arm_test$estimate[2]
 
 cat("Difference:", round(diff, 5), "\n",
-    "95% CI: [", round(test$conf.int[1], 8), ", ", 
-    round(test$conf.int[2], 8), "]")
+    "95% CI: [", round(arm_test$conf.int[1], 8), ", ", 
+    round(arm_test$conf.int[2], 8), "]")
 ```
+Using R's in-built function, the 95% confidence interval for the difference in proportions is [-0.09316, 0.18971] with an estimate of 0.04827.
 
-```{r}
+For the formulaic approach, I have inserted the formula for the standard error in a difference of proportions below, where $\hat{p_1}$ and $\hat{p_2}$ correspond to the proportions and ${N_1}$ and ${N_2}$ correspond to the size of the sample populations for each proportion (for example, ${N_1}$ is the amount of males for the proportion of males who fold their left hand on top).
+
+$$
+SE = \sqrt{\frac{\hat{p}_1 \cdot (1 - \hat{p}_1)}{N_1} + \frac{\hat{p}_2 \cdot (1 - \hat{p}_2)}{N_2}}
+$$
+
+To use the formula, I first calculated ${N_1}$ as the number of males in the dataset and $\hat{p_1}$ as the proportion of those males that fold their left arm on top. Similarly for the second set of variables, I computed ${N_2}$ as the number of females in the dataset and $\hat{p_2}$ as the proportion of those females that fold their left arm on top.
+
+From there, we simply plug these values into the formula and receive an output of 0.06746, which corresponds to the standard error of our sample. 
+
+From there, to construct a 95% confidence interval, we use the corresponding z* critical value of 1.96. Therefore, for the lower bound, we subtract 1.96 times the standard error from our sample's difference in proportions and add 1.96 times the standard error to our sample's difference in proportions for the upper bound.
+
+Using the formula, the 95% confidence interval for the difference in proportions is [-0.08393, 0.18049] with an estimate of 0.048274.
+
+```{r, results='hide', warning=FALSE, message=FALSE}
 f_count = nrow(armfold[armfold$Sex == "Female",])
 m_count = nrow(armfold[armfold$Sex == "Male",])
 
@@ -76,12 +92,11 @@ upper_bound = prop_diff + 1.96 * std_error
 cat("Difference:", prop_diff)
 cat("95% CI: [", lower_bound, ",", upper_bound, "]")
 ```
-z-score is 1.96 cuz 0.95, values above, formula above
 
-yap about the values used, use in-line r code as well
+If we compare these two intervals, we can see that the lower bounds are slightly different while the upper bounds are almost identical, which aligns with what we expected to see. Therefore, in our example, we have verified that the formula and R's in-built function give virtually identical results.
 
 ## Part D
-if we were to run this experiment of having students fold their names and note down their genders, the difference in proportions of the students folding their left hand on top by sex, then we would expect that difference to be within [,]
+If we were to run this experiment of having students fold their names and note down their genders, the difference in proportions of the students folding their left hand on top by sex, then we would expect that difference to be within [-0.09316, 0.18971].
 
 ## Part E
 smth smth standard deviation of sample estimate
@@ -106,11 +121,129 @@ turnout = read.csv("turnout.csv")
 ```
 
 ## Part A
+```{r}
+prop_call1998 = nrow(turnout[turnout$voted1998 == 1 & turnout$GOTV_call == 1,])/
+  nrow(turnout[turnout$GOTV_call == 1,])
 
+prop_nocall1998 = nrow(turnout[turnout$voted1998 == 1 & turnout$GOTV_call == 0,])/
+  nrow(turnout[turnout$GOTV_call == 0,])
+
+vote_test = prop.test(voted1998 ~ GOTV_call, data=turnout, success=1) 
+vote_test
+```
 ## Part B
+### Voting in the 1996 elections
+```{r}
+confounder_1996_98 = prop.test(voted1996 ~ voted1998, data=turnout, success=1) 
+confounder_1996_98
+
+summary_1996_98 = turnout %>%
+  group_by(voted1996) %>%
+  summarize(voted1998 = prop(~voted1998))
+
+summary_1996_98
+
+confounder_1996_call = prop.test(voted1996 ~ GOTV_call, data=turnout, success=1) 
+confounder_1996_call
+
+summary_1996_call = turnout %>%
+  group_by(voted1996) %>%
+  summarize(call = prop(~GOTV_call))
+
+summary_1996_call
+```
+
+### Majority party registration
+```{r}
+confounder_party_98 = prop.test(MAJORPTY ~ voted1998, data=turnout, success=1) 
+confounder_party_98
+
+summary_party_98 = turnout %>%
+  group_by(MAJORPTY) %>%
+  summarize(voted1998 = prop(~voted1998))
+
+summary_party_98
+
+confounder_party_call = prop.test(MAJORPTY ~ GOTV_call, data=turnout, success=1) 
+confounder_party_call
+
+summary_party_call = turnout %>%
+  group_by(MAJORPTY) %>%
+  summarize(call = prop(~GOTV_call))
+
+summary_party_call
+```
+
+### Age of individual in voter database
+```{r}
+ggplot(turnout) +
+  geom_boxplot(aes(x=AGE, y=factor(voted1998)))
+
+confounder_age_98 = t.test(AGE ~ voted1998, data=turnout, success=1)
+confounder_age_98
+
+ggplot(turnout) +
+  geom_boxplot(aes(x=AGE, y=factor(GOTV_call)))
+
+confounder_age_call = t.test(AGE ~ GOTV_call, data=turnout, success=1)
+confounder_age_call
+```
 
 ## Part C
+```{r}
+call_match = matchit(GOTV_call ~ AGE + factor(MAJORPTY) + 
+                       factor(voted1996), data=turnout, ratio = 5)
 
+summary(call_match)
+
+matched_turnout = match.data(call_match)
+```
+
+### Voting in the 1996 elections
+```{r}
+confounder_1996_call = prop.test(voted1996 ~ GOTV_call, data=matched_turnout, success=1) 
+confounder_1996_call
+
+summary_1996_call = matched_turnout %>%
+  group_by(voted1996) %>%
+  summarize(call = prop(~GOTV_call))
+
+summary_1996_call
+```
+
+### Majority party registration
+```{r}
+confounder_party_call = prop.test(MAJORPTY ~ GOTV_call, data=matched_turnout, success=1) 
+confounder_party_call
+
+summary_party_call = matched_turnout %>%
+  group_by(MAJORPTY) %>%
+  summarize(call = prop(~GOTV_call))
+
+summary_party_call
+```
+
+### Age of individual in voter database
+```{r}
+
+ggplot(matched_turnout) +
+  geom_boxplot(aes(x=AGE, y=factor(GOTV_call)))
+
+confounder_age_call = t.test(AGE ~ GOTV_call, data=matched_turnout, success=1)
+confounder_age_call
+```
+
+### Matched values
+```{r}
+prop_call1998 = nrow(matched_turnout[matched_turnout$voted1998 == 1 & 
+    matched_turnout$GOTV_call == 1,])/nrow(matched_turnout[matched_turnout$GOTV_call == 1,])
+
+prop_nocall1998 = nrow(matched_turnout[matched_turnout$voted1998 == 1 & 
+    matched_turnout$GOTV_call == 0,])/nrow(matched_turnout[matched_turnout$GOTV_call == 0,])
+
+vote_test = prop.test(voted1998 ~ GOTV_call, data=matched_turnout, success=1) 
+vote_test
+```
 
 
 
