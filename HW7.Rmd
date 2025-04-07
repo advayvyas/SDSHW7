@@ -99,21 +99,25 @@ If we compare these two intervals, we can see that the lower bounds are slightly
 If we were to run this experiment of having students fold their names and note down their genders, the difference in proportions of the students folding their left hand on top by sex, then we would expect that difference to be within [-0.09316, 0.18971].
 
 ## Part E
-smth smth standard deviation of sample estimate
+The standard error is the standard deviation of the sampling distribution. In this case, it would the distribution created by prop.test or that is estimated by the formula. The standard error value would tell us how much the difference between the proportion of males who fold their left arm on top vs. females who fold their left arm on top would vary from sample to sample randomly.
 
 ## Part F
+Sampling distribution refers to the distribution of the difference in sample proportions that we would get if we repeated this study many times with different random samples. 
 
-smth smth samples of the difference in proportions, what stays fixed is the size
+What stays fixed is the sample size and the sample procedure as well as the total possible population. On the other hand, the observed sample proportions for males and females folding with the left arm on the top and the sample's respective difference in proportions would vary sample to sample. 
 
 ## Part G
+The mathematical justification comes from the Central Limit Theorem, which says that if sample sizes are sufficiently large, the distribution of proportions and differences in proportions in the samples will be approximately normal around the true proportion. Furthermore, the Law of Larger Numbers tells us that increasing the sample size will bring the sample proportion closer to the true proportion.
 
-centeral limit theorem, sample size works because it will eventually normalize, read textbook
+Therefore, using a normal distribution to approximate the sampling distribution of the difference in proportions is valid because the sampling distribution will eventually become normal around the true value.
 
 ## Part H
-i would agree cuz we cross 0 ong we do
+Since our interval includes 0, the possibility that there is no difference is still very real. If there is a difference, I'd say that it is likely that males fold their left arm on top more often. However, this is still very shaky and more analysis has to be conducted into this as the null hypothesis is a very real possibility.
 
 ## Part I
-yes, that's the point. not exactly the same, but the sampling distribution should mimic it enough that any sampling distribution will look like ours cuz nromal yk
+Yes, the confidence interval would be different across every sample because each sample randomly has small differences in its proportions, which impacts the difference in proportions and the resulting confidence interval. 
+
+However, if we repeatedly create 95% confidence intervals and have them form a sort of cover (analysis-style) then about 95% of those interval covers would contain the true difference in proportions. 
 
 # Problem 2
 ```{r}
@@ -121,7 +125,7 @@ turnout = read.csv("turnout.csv")
 ```
 
 ## Part A
-```{r}
+```{r, results='hide', warning=FALSE, message=FALSE}
 prop_call1998 = nrow(turnout[turnout$voted1998 == 1 & turnout$GOTV_call == 1,])/
   nrow(turnout[turnout$GOTV_call == 1,])
 
@@ -131,66 +135,120 @@ prop_nocall1998 = nrow(turnout[turnout$voted1998 == 1 & turnout$GOTV_call == 0,]
 vote_test = prop.test(voted1998 ~ GOTV_call, data=turnout, success=1) 
 vote_test
 ```
+The proportion of those receiving a GOTV call who voted in 1996 is `r prop_call1998` while the proportion of those not receiving a GOTV call who voted in 1998 is `r prop_nocall1998`.
+
+The large-sample 95% confidence interval using R's in-built prop.test results in the interval [0.1411, 0.2659].
+
 ## Part B
+To assess if a variable is a confounder, it needs to interfere positively with the likelihoods of voting in the 1998 elections and recieving a GOTV call. Therefore, we will assess its correlation with the outcome and the treatment, for each variable.
+
 ### Voting in the 1996 elections
-```{r}
+```{r, results='hide', warning=FALSE, message=FALSE}
 confounder_1996_98 = prop.test(voted1996 ~ voted1998, data=turnout, success=1) 
 confounder_1996_98
 
 summary_1996_98 = turnout %>%
   group_by(voted1996) %>%
   summarize(voted1998 = prop(~voted1998))
+```
+Voting in 1996 seems to have a strong positive effect on voting in 1998, with the interval for the difference in proportions being [0.3955, 0.4299] with 95% confidence.
 
-summary_1996_98
+```{r}
+knitr::kable(summary_1996_98, caption = "Proportion of voters in 1998 by if they voted in 1996")
+```
 
+From our sample, a useful summary statistic is from the table above. For the voted1996 column, a 1 indicates they voted in 1996 and a 0 indicates they did not. For the difference in proportions between those who voted in 1996 and those who did not, we see a massive difference of 0.4104. Therefore, we can conclude that voting in 1996 likely has a large positive effect on voting in 1998.
+
+```{r, results='hide', warning=FALSE, message=FALSE}
 confounder_1996_call = prop.test(voted1996 ~ GOTV_call, data=turnout, success=1) 
 confounder_1996_call
 
 summary_1996_call = turnout %>%
   group_by(voted1996) %>%
   summarize(call = prop(~GOTV_call))
+```
+Voting in 1996 also seems to have a decently positive effect on receiving a GOTV call, with the interval for the difference in proportions being [0.1224, 0.2411] with 95% confidence.
 
-summary_1996_call
+```{r}
+knitr::kable(summary_1996_call, caption="Proportion of recipients of GOTV calls by if they voted in 1996")
 ```
 
+From our sample, we can also deduce the summary statistic of the difference in proportions above. Like the previous table, a 1 in the voted1996 column indicates that they voted in 1996 while a 0 indicates that they did not. We can see that the proportion nearly doubles in our sample, which further establishes the positive effect that voting in 1996 has on recieivng a GOTV call.
+
+
+Since voting in the 1996 elections affects the likelihood of voting in 1998 and receiving a GOTV call, this variable could be interfering with the results and causing a false result - voting in 1996 is a confounder by definition.
+
 ### Majority party registration
-```{r}
+```{r, results='hide', warning=FALSE, message=FALSE}
 confounder_party_98 = prop.test(MAJORPTY ~ voted1998, data=turnout, success=1) 
 confounder_party_98
 
 summary_party_98 = turnout %>%
   group_by(MAJORPTY) %>%
   summarize(voted1998 = prop(~voted1998))
+```
+Registering with a majority party seems to have a decent positive effect on the likelihood of voting in 1998, with the interval for the difference in proportions being [0.0845, 0.1177] with 95% confidence.
 
-summary_party_98
+```{r}
+knitr::kable(summary_party_98, caption="Proportion of voters in 1998 by if they registered with a majority party")
+```
+The above table showcases the proportion of an individual voted in 1998 by if they registered with a majority party (1 = registered, 0 = not registered). From our sample, we can also look at the difference in proportions and see that it is approximately 0.1323, which indicates that registering with a majority party likely has a positive effect on voting in the 1998 elections. This outcome makes sense, because registering with a party likely means you plan to vote in primaries and elections.
 
+
+```{r, results='hide', warning=FALSE, message=FALSE}
 confounder_party_call = prop.test(MAJORPTY ~ GOTV_call, data=turnout, success=1) 
 confounder_party_call
 
 summary_party_call = turnout %>%
   group_by(MAJORPTY) %>%
   summarize(call = prop(~GOTV_call))
+```
+Similarly, registering with a majority party also seems to have a positive effect on receiving a GOTV call (albeit with a smaller effect compared to voting in 1998). This is likely due to being in a publicly available voter database already, and it seems to slightly increase the proportion. With 95% confidence, the interval for the difference in proportions is [0.0043, 0.109].
 
-summary_party_call
+```{r}
+knitr::kable(summary_party_call, caption="Proportion of recipients of GOTV calls by if they registered with a majority party")
 ```
 
-### Age of individual in voter database
-```{r}
-ggplot(turnout) +
-  geom_boxplot(aes(x=AGE, y=factor(voted1998)))
+The table above showcases the difference in proportions for our specific sample with a 1 in the MAJORPTY column indicating registration and a 0 indicating no registration. We can clearly see an increase in the proportion that have registered as a majority voter. 
 
+Since majority party registration has a positive effect on both voting in 1998 and recieiving a GOTV call, it could interfere by "acting as" a false result. Therefore, majority party registration is a confounder by definition.
+
+While majority party registration is a confounder, it seems to be less of an "issue" than voting in the 1996 elections.
+
+### Age of individual in voter database
+```{r, results='hide', warning=FALSE, message=FALSE}
 confounder_age_98 = t.test(AGE ~ voted1998, data=turnout, success=1)
 confounder_age_98
+```
 
-ggplot(turnout) +
-  geom_boxplot(aes(x=AGE, y=factor(GOTV_call)))
+For age, I took a slightly different approach and used the mean instead of a proportion since age has way too many possible values. After using the t-test to investigate the difference in mean age if they voted in 1998 or not, I got a 95% confidence interval of [9.821, 11.182] with sample estimates of 44.914 (non-voter) and 55.415 (voter). This information indicates that age has a positive correlation with voting in 1998: the higher your age is, the more likely you are to vote in 1998.
 
+```{r}
+ggplot(turnout) + geom_boxplot(aes(x=AGE, y=factor(voted1998)), fill='skyblue') + 
+  labs(x = "Age (years)", y= "Voted in 1998 (1=yes, 0=no)")
+```
+
+We can see this trend more clearly with the above box plot which plots the distribution of ages depending on voting in the 1998 elections. While the top box plot (voted in 1998) isn't completely past the bottom box plot (did not vote in 1998), there is a clear shift to the right (positive) when considering those who voted in 1998.
+
+Therefore, age has a positive correlation with voting in 1998. If age also has a positive impact on the likelihood of receiving a GOTV call, then age will be a confounder.
+
+```{r, results='hide', warning=FALSE, message=FALSE}
 confounder_age_call = t.test(AGE ~ GOTV_call, data=turnout, success=1)
 confounder_age_call
 ```
 
-## Part C
+Similar to the previous t-test, I used a t-test to compare mean age depending on if the individual recieved a GOTV call. The resulting 95% confidence interval was [6.3696, 11.395] with sample estimates of 49.425 (non-voter) and 58.3077 (voter). Therefore, age causes a positive effect on the likelihood that an individual will receive a GOTV call.
+
 ```{r}
+ggplot(turnout) + geom_boxplot(aes(x=AGE, y=factor(GOTV_call)), fill='skyblue') + 
+  labs(x = "Age (years)", y= "GOTV call (1=yes, 0=no)")
+```
+The above box plot visualizes the intervals and means in a more general way. The top box plot box plot ages of those who received a call, and the bottom box plot are those who did not. Clearly, the top box plot has a significant shift to the right over the left box plot. 
+
+Since age also has a positive impact on receiving a GOTV call, age has a positive effect on the likelihood on the treatment and the outcome. Therefore, age is a confounder by definition. 
+
+## Part C
+```{r, results='hide', warning=FALSE, message=FALSE}
 call_match = matchit(GOTV_call ~ AGE + factor(MAJORPTY) + 
                        factor(voted1996), data=turnout, ratio = 5)
 
@@ -198,52 +256,73 @@ summary(call_match)
 
 matched_turnout = match.data(call_match)
 ```
+I matched my dataset with 5 control cases for each treated case with respect to voted1996, AGE, MAJORPTY as the matching variables and GOTV_call as my treatment variable. Now, onto checking if the confounders are balanced in the "matched" data set. If the confounders all have no effect on GOTV calls, then they are no longer confounders.
 
 ### Voting in the 1996 elections
-```{r}
-confounder_1996_call = prop.test(voted1996 ~ GOTV_call, data=matched_turnout, success=1) 
-confounder_1996_call
+```{r, results='hide', warning=FALSE, message=FALSE}
+confounder_1996_call_m = prop.test(GOTV_call ~ voted1996, data=matched_turnout, success=1) 
+confounder_1996_call_m
 
-summary_1996_call = matched_turnout %>%
+summary_1996_call_m = matched_turnout %>%
   group_by(voted1996) %>%
   summarize(call = prop(~GOTV_call))
-
-summary_1996_call
 ```
+Voting in the 1996 elections in the matched data set seems to have no effect at all on receiving a GOTV call, with the interval for the difference in proportions being perfectly symmetrical around 0 as [-0.0419, 0.0419].
+
+```{r}
+knitr::kable(summary_1996_call_m, caption="Proportion of recipients of GOTV calls by if they voted
+in 1996 (matched dataset)")
+```
+
+The above table further proves this point as the proportions are identical and that there is no effect of voting in the 1996 elections on receiving a GOTV call in the matched data set.
+
 
 ### Majority party registration
-```{r}
-confounder_party_call = prop.test(MAJORPTY ~ GOTV_call, data=matched_turnout, success=1) 
-confounder_party_call
+```{r, results='hide', warning=FALSE, message=FALSE}
+confounder_party_call_m = prop.test(GOTV_call ~ MAJORPTY, data=matched_turnout, success=1) 
+confounder_party_call_m
 
-summary_party_call = matched_turnout %>%
+summary_party_call_m = matched_turnout %>%
   group_by(MAJORPTY) %>%
   summarize(call = prop(~GOTV_call))
-
-summary_party_call
 ```
+Like the other former confounders, having a majority party registration no longer has any effect on receiving a GOTV call. With 95% confidence, the new interval for the difference in proportions is [-0.0556, 0.0455]. Since this interval is centered around a number very close to 0 and the interval includes 0, we can conclude that majority party registration is no longer a confounder.
+
+```{r}
+knitr::kable(summary_party_call_m, caption="Proportion of recipients of GOTV calls by if they registered with a majority party (matched dataset)")
+```
+
+The above table (formatting similar to previous party registration vs. call table) demonstrates this new relationship with very similar proportion values for registered and non-registered individuals.
 
 ### Age of individual in voter database
-```{r}
-
-ggplot(matched_turnout) +
-  geom_boxplot(aes(x=AGE, y=factor(GOTV_call)))
-
-confounder_age_call = t.test(AGE ~ GOTV_call, data=matched_turnout, success=1)
-confounder_age_call
+```{r, results='hide', warning=FALSE, message=FALSE}
+confounder_age_call_m = t.test(AGE ~ GOTV_call, data=matched_turnout, success=1)
+confounder_age_call_m
 ```
+The t-test results in an almost symmetrical 95% confidence interval centered around 0: namely, [-2.678, 2.76] (I flipped the signs and reversed it because I did that for the previous iterations and this should be the accurate interval, not that it matters much). Since 0 is about the center of the interval, we can say that the matched data set very likely has no correlation between age and GOTV calls.
+
+```{r}
+ggplot(matched_turnout) + geom_boxplot(aes(x=AGE, y=factor(GOTV_call)), fill='skyblue') + 
+  labs(x = "Age (years)", y= "GOTV call (1=yes, 0=no)")
+```
+
+The above boxplot (with similar formatting to the previous age vs. call boxpot) reinforces this claim, as the distributions appear to be nearly identical.
 
 ### Matched values
-```{r}
-prop_call1998 = nrow(matched_turnout[matched_turnout$voted1998 == 1 & 
+```{r, results='hide', warning=FALSE, message=FALSE}
+prop_call1998_m = nrow(matched_turnout[matched_turnout$voted1998 == 1 & 
     matched_turnout$GOTV_call == 1,])/nrow(matched_turnout[matched_turnout$GOTV_call == 1,])
 
-prop_nocall1998 = nrow(matched_turnout[matched_turnout$voted1998 == 1 & 
+prop_nocall1998_m = nrow(matched_turnout[matched_turnout$voted1998 == 1 & 
     matched_turnout$GOTV_call == 0,])/nrow(matched_turnout[matched_turnout$GOTV_call == 0,])
 
-vote_test = prop.test(voted1998 ~ GOTV_call, data=matched_turnout, success=1) 
-vote_test
+vote_test_m = prop.test(voted1998 ~ GOTV_call, data=matched_turnout, success=1) 
+vote_test_m
 ```
+With the matched values having largely taken care of the confounders, the matched dataset should be able to tell us the true statistics of the population, albeit with a smaller population.
 
+In the matched dataset, the proportion of those receiving a GOTV call who voted in 1996 is 0.6477733 while the proportion of those not receiving a GOTV call who voted in 1998 is 0.5692308. So, it seems the confounders did falsely exaggerate the effect but it still seems valid because of the following interval.
+
+The large-sample 95% confidence interval on the matched dataset using R’s in-built prop.test results in the interval [0.0105, 0.1466]. While the effect isn't as large as it was before, it still seems likely that a GOTV call increases the liikelihood of voting in the 1998 election.
 
 
