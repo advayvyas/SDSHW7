@@ -1,0 +1,116 @@
+---
+title: 'Homework #7'
+author: "Advay Vyas"
+date: 4/7/25
+output:
+  pdf_document:
+    toc: true
+urlcolor: blue
+linkcolor: red
+---
+
+```{r global_options, echo=FALSE}
+knitr::opts_chunk$set(fig.height=4, fig.width=6, fig.align = "center", warning=FALSE, echo=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60))
+```
+
+------------------------------------------------------------------------
+
+```{r, results='hide', warning=FALSE, message=FALSE}
+# loading libraries
+library(tidyverse)
+library(ggplot2)
+library(lubridate)
+library(sas7bdat)
+library(rvest)
+library(stringr)
+library(boot)
+library(mosaic)
+```
+
+# Introduction
+
+I'm Advay Vyas, EID: av37899, and this is my submission for SDS 315 Statistical Thinking Homework #7. The GitHub repository for my code is at this [link](https://github.com/advayvyas/SDSHW7).
+
+\newpage
+
+# Problem 1
+```{r}
+armfold = read.csv("armfold.csv")
+```
+
+## Part A
+```{r}
+knitr::kable(armfold %>% group_by(Sex) %>% summarize(Frequency = n(), Prop = sum(LonR_fold==1)/Frequency), caption = "Students in dataset", 
+             col.names = c("Sex", "Frequency", "Proportion with Left Hand on Top"), digits = 3)
+```
+
+## Part B
+The observed difference in proportions between the two groups is `r -round(diffprop(Sex~LonR_fold, data=armfold), 3)` (males minus females).
+
+## Part C
+```{r}
+armfold$Sex = relevel(factor(armfold$Sex), ref = "Male")
+test = prop.test(LonR_fold ~ Sex, data=armfold, success=1) # male - female
+
+diff = test$estimate[1] - test$estimate[2]
+
+cat("Difference:", round(diff, 5), "\n",
+    "95% CI: [", round(test$conf.int[1], 8), ", ", 
+    round(test$conf.int[2], 8), "]")
+```
+
+```{r}
+f_count = nrow(armfold[armfold$Sex == "Female",])
+m_count = nrow(armfold[armfold$Sex == "Male",])
+
+f_prop = nrow(armfold[armfold$Sex == "Female" & armfold$LonR_fold == 1,])/f_count
+m_prop = nrow(armfold[armfold$Sex == "Male" & armfold$LonR_fold == 1,])/m_count
+  
+std_error = sqrt((m_prop * (1 - m_prop)) / m_count + (f_prop * (1 - f_prop)) / f_count)
+
+prop_diff = m_prop - f_prop
+
+lower_bound = prop_diff - 1.96 * std_error
+upper_bound = prop_diff + 1.96 * std_error
+
+cat("Difference:", prop_diff)
+cat("95% CI: [", lower_bound, ",", upper_bound, "]")
+```
+z-score is 1.96 cuz 0.95, values above, formula above
+
+yap about the values used, use in-line r code as well
+
+## Part D
+if we were to run this experiment of having students fold their names and note down their genders, the difference in proportions of the students folding their left hand on top by sex, then we would expect that difference to be within [,]
+
+## Part E
+smth smth standard deviation of sample estimate
+
+## Part F
+
+smth smth samples of the difference in proportions, what stays fixed is the size
+
+## Part G
+
+centeral limit theorem, sample size works because it will eventually normalize, read textbook
+
+## Part H
+i would agree cuz we cross 0 ong we do
+
+## Part I
+yes, that's the point. not exactly the same, but the sampling distribution should mimic it enough that any sampling distribution will look like ours cuz nromal yk
+
+# Problem 2
+```{r}
+turnout = read.csv("turnout.csv")
+```
+
+## Part A
+
+## Part B
+
+## Part C
+
+
+
+
